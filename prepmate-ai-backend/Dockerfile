@@ -1,44 +1,30 @@
-# ── Build stage ──────────────────────────────────────────────────────────────
-FROM python:3.11-slim AS builder
-
-WORKDIR /app
-
-# Install system dependencies (Tesseract OCR + libs)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    tesseract-ocr \
-    tesseract-ocr-eng \
-    libtesseract-dev \
-    libgl1-mesa-glx \
-    libglib2.0-0 \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Python deps
-COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
-
-# ── Runtime stage ─────────────────────────────────────────────────────────────
+# ── Single-stage build (simpler, avoids library copy issues on Trixie) ────────
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Copy Tesseract from builder
-COPY --from=builder /usr/bin/tesseract /usr/bin/tesseract
-COPY --from=builder /usr/share/tesseract-ocr /usr/share/tesseract-ocr
-COPY --from=builder /usr/lib/x86_64-linux-gnu/libtesseract* /usr/lib/x86_64-linux-gnu/
-COPY --from=builder /usr/lib/x86_64-linux-gnu/liblept* /usr/lib/x86_64-linux-gnu/
+# ── System dependencies ───────────────────────────────────────────────────────
+# NOTE: libgl1-mesa-glx was removed in Debian Trixie; use libgl1 instead.
+# libglib2.0-0t64 is the Trixie-renamed transitional package for libglib2.0-0.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    tesseract-ocr \
+    tesseract-ocr-eng \
+    libgl1 \
+    libglib2.0-0t64 \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy installed Python packages
-COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
+# ── Python dependencies ───────────────────────────────────────────────────────
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# ── Application code ──────────────────────────────────────────────────────────
 COPY . .
 
-# Create upload directory
+# ── Upload temp directory ─────────────────────────────────────────────────────
 RUN mkdir -p /tmp/prepmate_uploads
 
-# Non-root user for security
+# ── Non-root user for security ────────────────────────────────────────────────
 RUN adduser --disabled-password --gecos "" appuser \
     && chown -R appuser:appuser /app /tmp/prepmate_uploads
 USER appuser

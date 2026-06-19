@@ -1,0 +1,45 @@
+# render.yaml — Render.com deployment configuration
+# Deploy with: Connect GitHub repo → Render auto-detects this file
+
+services:
+  - type: web
+    name: prepmate-ai-backend
+    runtime: python
+    region: oregon               # or frankfurt, singapore, ohio
+    plan: starter                # starter (free) | standard | pro
+
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
+      apt-get install -y tesseract-ocr tesseract-ocr-eng || true
+
+    startCommand: |
+      uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 2
+
+    healthCheckPath: /health
+
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: false
+      - key: FIREBASE_PROJECT_ID
+        sync: false              # Set in Render dashboard
+      - key: FIREBASE_CREDENTIALS_JSON
+        sync: false              # Set in Render dashboard (entire JSON as string)
+      - key: FIREBASE_STORAGE_BUCKET
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true      # Render auto-generates a secure random value
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: UPLOAD_DIR
+        value: /tmp/prepmate_uploads
+      - key: RATE_LIMIT_REQUESTS
+        value: "100"
+      - key: RATE_LIMIT_WINDOW_SECONDS
+        value: "60"
+
+    autoDeploy: true             # Deploy on every push to main branch

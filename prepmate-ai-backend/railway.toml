@@ -1,0 +1,23 @@
+# railway.toml — Railway.app deployment configuration
+# Deploy with: railway up  OR  connect GitHub repo
+
+[build]
+builder = "nixpacks"
+buildCommand = "pip install -r requirements.txt"
+
+[deploy]
+startCommand = "uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 2"
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+[environments.production]
+# Set these in Railway dashboard → Variables tab
+# FIREBASE_PROJECT_ID
+# FIREBASE_CREDENTIALS_JSON
+# FIREBASE_STORAGE_BUCKET
+# GEMINI_API_KEY
+# SECRET_KEY
+# ALLOWED_ORIGINS
+# ENVIRONMENT = production

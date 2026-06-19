@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# Secrets
+.env
+*.env
+firebase-service-account.json
+*-service-account.json
+*.pem
+*.key
+
+# Upload temp files
+/tmp/
+uploads/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS
+.DS_Store
+Thumbs.db

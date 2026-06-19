@@ -26,7 +26,7 @@ class OpenAiService implements AiService {
   OpenAiService({
     required String apiKey,
     String model = 'gpt-4o-mini',
-    String baseUrl = 'https://prepmate-ay6b.onrender.com/',
+    String baseUrl = 'https://prepmate-ay6b.onrender.com',
   })  : _apiKey = apiKey,
         _model = model,
         _baseUrl = baseUrl,

@@ -1,14 +1,14 @@
 buildscript {
-    ext.kotlin_version = '1.9.0'
+    ext.kotlin_version = '1.9.23'
     repositories {
         google()
         mavenCentral()
     }
-
     dependencies {
+        // AGP 8.3 requires Gradle 8.4+ and supports Java 17 & Java 21
         classpath 'com.android.tools.build:gradle:8.3.2'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        classpath 'com.google.gms:google-services:4.4.0'
+        classpath 'com.google.gms:google-services:4.4.1'
     }
 }
 

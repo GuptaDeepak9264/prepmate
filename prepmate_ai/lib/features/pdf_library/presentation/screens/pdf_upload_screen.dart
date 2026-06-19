@@ -173,33 +173,15 @@ class _PdfUploadScreenState extends ConsumerState<PdfUploadScreen> {
             ).animate().fadeIn(delay: 150.ms),
             const SizedBox(height: 32),
 
-            // Upload progress
+            // Cloudinary upload progress
             if (isLoading) ...[
-              ClipRRect(
-                borderRadius: BorderRadius.circular(AppRadius.pill),
-                child: LinearProgressIndicator(
-                  value: uploadState.progress > 0
-                      ? uploadState.progress
-                      : null,
-                  minHeight: 6,
-                  backgroundColor: AppColors.primary.withOpacity(0.12),
-                  valueColor:
-                      const AlwaysStoppedAnimation<Color>(AppColors.primary),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Center(
-                child: Text(
-                  'Uploading${uploadState.progress > 0 ? ' ${(uploadState.progress * 100).toStringAsFixed(0)}%' : '...'}',
-                  style: AppTextStyles.bodyMedium,
-                ),
-              ),
+              _CloudinaryProgressBar(progress: uploadState.progress),
               const SizedBox(height: 16),
             ],
 
             // Upload button
             AppButton(
-              label: 'Upload PDF',
+              label: 'Upload to Cloudinary',
               onPressed: isLoading ? null : _upload,
               isLoading: isLoading,
               icon: Icons.cloud_upload_rounded,
@@ -320,6 +302,72 @@ class _CategoryChip extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+
+// ─── Cloudinary Upload Progress Widget ───────────────────────────────────────
+
+class _CloudinaryProgressBar extends StatelessWidget {
+  final double progress; // 0.0–1.0; 0 means indeterminate
+
+  const _CloudinaryProgressBar({required this.progress});
+
+  @override
+  Widget build(BuildContext context) {
+    final pct = progress.clamp(0.0, 1.0);
+    final known = pct > 0.0;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                // Cloudinary logo colour dot
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF3448C5), // Cloudinary brand blue
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Uploading to Cloudinary',
+                  style: AppTextStyles.bodySmall
+                      .copyWith(fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+            Text(
+              known ? '${(pct * 100).toStringAsFixed(0)}%' : '—',
+              style: AppTextStyles.bodySmall
+                  .copyWith(color: AppColors.primary, fontWeight: FontWeight.w700),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          child: LinearProgressIndicator(
+            value: known ? pct : null,
+            minHeight: 7,
+            backgroundColor: const Color(0xFF3448C5).withOpacity(0.12),
+            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF3448C5)),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          known
+              ? 'Your PDF is being securely stored in Cloudinary'
+              : 'Connecting to Cloudinary…',
+          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textTertiary),
+        ),
+      ],
     );
   }
 }

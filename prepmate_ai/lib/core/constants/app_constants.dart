@@ -3,6 +3,23 @@ class AppConstants {
   static const String appName = 'PrepMate AI';
   static const String appVersion = '1.0.0';
 
+  // ── Cloudinary ────────────────────────────────────────────────────────────
+  // Replace these values or pass via --dart-define at build time:
+  //   flutter run \
+  //     --dart-define=CLOUDINARY_CLOUD_NAME=mycloud \
+  //     --dart-define=CLOUDINARY_UPLOAD_PRESET=prepmate_unsigned
+  static const String cloudinaryCloudName = String.fromEnvironment(
+    'CLOUDINARY_CLOUD_NAME',
+    defaultValue: 'YOUR_CLOUD_NAME',
+  );
+  static const String cloudinaryUploadPreset = String.fromEnvironment(
+    'CLOUDINARY_UPLOAD_PRESET',
+    defaultValue: 'YOUR_UPLOAD_PRESET',
+  );
+  // Folder paths inside Cloudinary media library
+  static const String cloudinaryPdfFolder = 'prepmate/pdfs';
+  static const String cloudinaryAvatarFolder = 'prepmate/avatars';
+
   // Firestore Collections
   static const String usersCollection = 'users';
   static const String pdfsCollection = 'pdfs';
@@ -12,7 +29,7 @@ class AppConstants {
   static const String tasksCollection = 'tasks';
   static const String streaksCollection = 'streaks';
 
-  // Storage Paths
+  // Storage Paths (kept for reference / migration docs)
   static const String pdfStoragePath = 'pdfs';
   static const String avatarStoragePath = 'avatars';
 

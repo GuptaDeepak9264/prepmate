@@ -3,7 +3,8 @@ import 'package:equatable/equatable.dart';
 class PdfEntity extends Equatable {
   final String id;
   final String name;
-  final String url;
+  final String url;             // Cloudinary secure_url
+  final String cloudinaryPublicId; // Cloudinary public_id (for deletion via backend)
   final String category;
   final int sizeBytes;
   final int pageCount;
@@ -15,6 +16,7 @@ class PdfEntity extends Equatable {
     required this.id,
     required this.name,
     required this.url,
+    required this.cloudinaryPublicId,
     required this.category,
     required this.sizeBytes,
     required this.pageCount,
@@ -33,10 +35,17 @@ class PdfEntity extends Equatable {
   double get readProgress =>
       pageCount > 0 ? lastReadPage / pageCount : 0.0;
 
-  PdfEntity copyWith({int? lastReadPage, int? pageCount}) => PdfEntity(
+  PdfEntity copyWith({
+    int? lastReadPage,
+    int? pageCount,
+    String? url,
+    String? cloudinaryPublicId,
+  }) =>
+      PdfEntity(
         id: id,
         name: name,
-        url: url,
+        url: url ?? this.url,
+        cloudinaryPublicId: cloudinaryPublicId ?? this.cloudinaryPublicId,
         category: category,
         sizeBytes: sizeBytes,
         pageCount: pageCount ?? this.pageCount,
@@ -49,6 +58,7 @@ class PdfEntity extends Equatable {
         id: id,
         name: map['name'] as String? ?? '',
         url: map['url'] as String? ?? '',
+        cloudinaryPublicId: map['cloudinaryPublicId'] as String? ?? '',
         category: map['category'] as String? ?? 'General',
         sizeBytes: map['sizeBytes'] as int? ?? 0,
         pageCount: map['pageCount'] as int? ?? 0,
@@ -62,6 +72,7 @@ class PdfEntity extends Equatable {
   Map<String, dynamic> toMap() => {
         'name': name,
         'url': url,
+        'cloudinaryPublicId': cloudinaryPublicId,
         'category': category,
         'sizeBytes': sizeBytes,
         'pageCount': pageCount,
@@ -71,5 +82,6 @@ class PdfEntity extends Equatable {
       };
 
   @override
-  List<Object?> get props => [id, name, url, category, lastReadPage];
+  List<Object?> get props =>
+      [id, name, url, cloudinaryPublicId, category, lastReadPage];
 }

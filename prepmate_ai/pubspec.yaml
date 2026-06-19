@@ -10,11 +10,13 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Firebase
+  # Firebase (Auth + Firestore only — Storage replaced by Cloudinary)
   firebase_core: ^2.24.2
   firebase_auth: ^4.16.0
   cloud_firestore: ^4.15.0
-  firebase_storage: ^11.6.0
+
+  # Cloudinary (REST upload via Dio multipart)
+  http_parser: ^4.0.2
 
   # State Management
   flutter_riverpod: ^2.4.9

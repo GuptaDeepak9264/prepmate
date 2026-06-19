@@ -328,7 +328,7 @@ class _PdfTile extends ConsumerWidget {
               Navigator.pop(context);
               await ref
                   .read(pdfUploadProvider.notifier)
-                  .deletePdf(pdf.id, pdf.url);
+                  .deletePdf(pdf.id, cloudinaryPublicId: pdf.cloudinaryPublicId);
             },
             child: const Text('Delete',
                 style: TextStyle(color: AppColors.error)),

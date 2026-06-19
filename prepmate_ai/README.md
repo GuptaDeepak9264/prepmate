@@ -94,9 +94,21 @@ Then place your `google-services.json` in `android/app/`.
 Enable in Firebase Console:
 - ✅ Authentication → Email/Password
 - ✅ Firestore Database
-- ✅ Storage
 
-### 4. AI Service Configuration
+> Firebase Storage is **not used**. PDFs and avatars are stored in Cloudinary.
+> See **CLOUDINARY_SETUP.md** for full Cloudinary configuration steps.
+
+### 4. Cloudinary Configuration
+
+```bash
+flutter run \
+  --dart-define=CLOUDINARY_CLOUD_NAME=your_cloud_name \
+  --dart-define=CLOUDINARY_UPLOAD_PRESET=prepmate_unsigned
+```
+
+See **CLOUDINARY_SETUP.md** for full instructions.
+
+### 5. AI Service Configuration
 
 In `lib/features/ai_chat/presentation/providers/chat_provider.dart`:
 
@@ -114,7 +126,7 @@ Or pass via `--dart-define`:
 flutter run --dart-define=OPENAI_API_KEY=sk-xxx
 ```
 
-### 5. Run the App
+### 6. Run the App
 
 ```bash
 flutter run
@@ -130,6 +142,7 @@ flutter run
 | State Management | Riverpod 2.x |
 | Navigation | GoRouter |
 | Auth | Firebase Auth |
+| File Storage | Cloudinary (REST upload) |
 | Database | Cloud Firestore |
 | Storage | Firebase Storage |
 | PDF Viewing | flutter_pdfview |

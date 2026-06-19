@@ -7,9 +7,10 @@ import '../../domain/entities/pdf_entity.dart';
 
 // ─── Repository ───────────────────────────────────────────────────────────────
 
-final pdfRepositoryProvider = Provider<PdfRepository>((ref) => PdfRepository());
+final pdfRepositoryProvider =
+    Provider<PdfRepository>((ref) => PdfRepository());
 
-// ─── PDF List (real-time) ─────────────────────────────────────────────────────
+// ─── PDF List (real-time Firestore stream) ────────────────────────────────────
 
 final pdfListProvider = StreamProvider<List<PdfEntity>>((ref) {
   final auth = ref.watch(authStateProvider);
@@ -23,12 +24,13 @@ final pdfListProvider = StreamProvider<List<PdfEntity>>((ref) {
   );
 });
 
-// ─── PDF Search Query ─────────────────────────────────────────────────────────
+// ─── Search / filter state ────────────────────────────────────────────────────
 
 final pdfSearchQueryProvider = StateProvider<String>((ref) => '');
 final pdfCategoryFilterProvider = StateProvider<String>((ref) => 'All');
 
-final filteredPdfListProvider = Provider<AsyncValue<List<PdfEntity>>>((ref) {
+final filteredPdfListProvider =
+    Provider<AsyncValue<List<PdfEntity>>>((ref) {
   final query = ref.watch(pdfSearchQueryProvider).toLowerCase();
   final category = ref.watch(pdfCategoryFilterProvider);
   return ref.watch(pdfListProvider).whenData((pdfs) {
@@ -36,16 +38,18 @@ final filteredPdfListProvider = Provider<AsyncValue<List<PdfEntity>>>((ref) {
       final matchesSearch = query.isEmpty ||
           p.name.toLowerCase().contains(query) ||
           p.category.toLowerCase().contains(query);
-      final matchesCategory = category == 'All' || p.category == category;
+      final matchesCategory =
+          category == 'All' || p.category == category;
       return matchesSearch && matchesCategory;
     }).toList();
   });
 });
 
-// ─── Upload State ─────────────────────────────────────────────────────────────
+// ─── Upload state ─────────────────────────────────────────────────────────────
 
 class UploadState {
   final bool isUploading;
+  /// 0.0 – 1.0 fraction; -1 means indeterminate
   final double progress;
   final String? error;
   final bool isSuccess;
@@ -71,12 +75,15 @@ class UploadState {
       );
 }
 
+// ─── Upload notifier ──────────────────────────────────────────────────────────
+
 class PdfUploadNotifier extends StateNotifier<UploadState> {
   final PdfRepository _repo;
   final Ref _ref;
 
   PdfUploadNotifier(this._repo, this._ref) : super(const UploadState());
 
+  /// Upload [file] to Cloudinary and save the URL to Firestore.
   Future<PdfEntity?> uploadPdf({
     required File file,
     required String name,
@@ -85,26 +92,41 @@ class PdfUploadNotifier extends StateNotifier<UploadState> {
     final user = await _ref.read(authStateProvider.future);
     if (user == null) return null;
 
-    state = state.copyWith(isUploading: true, progress: 0);
+    state = state.copyWith(isUploading: true, progress: 0, error: null);
+
     try {
       final entity = await _repo.uploadPdf(
         uid: user.uid,
         file: file,
         name: name,
         category: category,
+        onProgress: (p) {
+          // Update progress on the Riverpod state so UI can show a bar
+          if (mounted) state = state.copyWith(progress: p);
+        },
       );
       state = state.copyWith(isUploading: false, isSuccess: true);
       return entity;
     } catch (e) {
-      state = state.copyWith(isUploading: false, error: e.toString());
+      state = state.copyWith(
+        isUploading: false,
+        error: _friendlyError(e),
+      );
       return null;
     }
   }
 
-  Future<void> deletePdf(String pdfId, String url) async {
+  /// Deletes the Firestore doc. Cloudinary deletion is server-side — see
+  /// PdfRepository.deletePdf() docstring for details.
+  Future<void> deletePdf(String pdfId,
+      {String? cloudinaryPublicId}) async {
     final user = await _ref.read(authStateProvider.future);
     if (user == null) return;
-    await _repo.deletePdf(user.uid, pdfId, url);
+    await _repo.deletePdf(
+      user.uid,
+      pdfId,
+      cloudinaryPublicId: cloudinaryPublicId,
+    );
   }
 
   Future<void> updateLastPage(String pdfId, int page) async {
@@ -120,6 +142,18 @@ class PdfUploadNotifier extends StateNotifier<UploadState> {
   }
 
   void reset() => state = const UploadState();
+
+  String _friendlyError(Object e) {
+    final msg = e.toString();
+    if (msg.contains('CloudinaryException')) {
+      if (msg.contains('401') || msg.contains('403')) {
+        return 'Invalid Cloudinary credentials. Check cloud name & upload preset.';
+      }
+      if (msg.contains('Network')) return 'Network error. Check your connection.';
+      return 'Cloudinary upload failed: $msg';
+    }
+    return 'Upload failed. Please try again.';
+  }
 }
 
 final pdfUploadProvider =

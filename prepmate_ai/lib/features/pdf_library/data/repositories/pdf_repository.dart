@@ -1,27 +1,35 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../domain/entities/pdf_entity.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/services/cloudinary_service.dart';
 
 class PdfRepository {
   final FirebaseFirestore _firestore;
-  final FirebaseStorage _storage;
+  final CloudinaryService _cloudinary;
   final _uuid = const Uuid();
 
   PdfRepository({
     FirebaseFirestore? firestore,
-    FirebaseStorage? storage,
+    CloudinaryService? cloudinary,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _storage = storage ?? FirebaseStorage.instance;
+        _cloudinary = cloudinary ??
+            CloudinaryService(
+              cloudName: AppConstants.cloudinaryCloudName,
+              uploadPreset: AppConstants.cloudinaryUploadPreset,
+            );
+
+  // ─── Firestore ref ────────────────────────────────────────────────────────
 
   CollectionReference<Map<String, dynamic>> _userPdfs(String uid) =>
       _firestore
           .collection(AppConstants.usersCollection)
           .doc(uid)
           .collection(AppConstants.pdfsCollection);
+
+  // ─── Real-time list ───────────────────────────────────────────────────────
 
   Stream<List<PdfEntity>> watchPdfs(String uid) {
     return _userPdfs(uid)
@@ -31,31 +39,42 @@ class PdfRepository {
             snap.docs.map((d) => PdfEntity.fromMap(d.data(), d.id)).toList());
   }
 
+  // ─── Upload ───────────────────────────────────────────────────────────────
+
+  /// Uploads [file] to Cloudinary, then stores the returned URL + metadata
+  /// in Firestore. Returns the persisted [PdfEntity].
+  ///
+  /// [onProgress] streams upload progress as a 0.0–1.0 fraction.
   Future<PdfEntity> uploadPdf({
     required String uid,
     required File file,
     required String name,
     required String category,
+    void Function(double progress)? onProgress,
   }) async {
     final id = _uuid.v4();
-    final size = await file.length();
+    final sizeBytes = await file.length();
 
-    // Upload to Firebase Storage
-    final storageRef = _storage
-        .ref()
-        .child('${AppConstants.pdfStoragePath}/$uid/$id.pdf');
-    final uploadTask = await storageRef.putFile(
-      file,
-      SettableMetadata(contentType: 'application/pdf'),
+    // ── 1. Upload to Cloudinary ────────────────────────────────────────────
+    final result = await _cloudinary.uploadPdf(
+      file: file,
+      folder: '${AppConstants.cloudinaryPdfFolder}/$uid',
+      publicId: id, // use our own UUID as the Cloudinary public_id
+      onProgress: (sent, total) {
+        if (total > 0 && onProgress != null) {
+          onProgress(sent / total);
+        }
+      },
     );
-    final url = await uploadTask.ref.getDownloadURL();
 
+    // ── 2. Persist metadata in Firestore ──────────────────────────────────
     final entity = PdfEntity(
       id: id,
       name: name,
-      url: url,
+      url: result.secureUrl,                 // https://res.cloudinary.com/…
+      cloudinaryPublicId: result.publicId,   // prepmate/pdfs/uid/uuid
       category: category,
-      sizeBytes: size,
+      sizeBytes: sizeBytes,
       pageCount: 0,
       lastReadPage: 0,
       uploadedAt: DateTime.now(),
@@ -66,12 +85,31 @@ class PdfRepository {
     return entity;
   }
 
-  Future<void> deletePdf(String uid, String pdfId, String url) async {
+  // ─── Delete ───────────────────────────────────────────────────────────────
+
+  /// Removes the Firestore document.
+  ///
+  /// The Cloudinary asset is NOT deleted here because client-side deletion
+  /// requires an API secret (which must never be shipped in the app).
+  /// To delete Cloudinary assets, call a Firebase Cloud Function:
+  ///
+  ///   exports.deleteCloudinaryAsset = functions.https.onCall(async (data) => {
+  ///     await cloudinary.uploader.destroy(data.publicId, {resource_type:'raw'});
+  ///   });
+  Future<void> deletePdf(String uid, String pdfId,
+      {String? cloudinaryPublicId}) async {
+    // 1. Delete Firestore document
     await _userPdfs(uid).doc(pdfId).delete();
-    try {
-      await _storage.refFromURL(url).delete();
-    } catch (_) {}
+
+    // 2. Cloudinary deletion → must be done server-side (see docstring above).
+    //    Uncomment once you have a backend endpoint:
+    //
+    // if (cloudinaryPublicId != null && cloudinaryPublicId.isNotEmpty) {
+    //   await yourCloudFunctionClient.deleteAsset(cloudinaryPublicId);
+    // }
   }
+
+  // ─── Page tracking ────────────────────────────────────────────────────────
 
   Future<void> updateLastReadPage(String uid, String pdfId, int page) async {
     await _userPdfs(uid).doc(pdfId).update({'lastReadPage': page});
@@ -80,6 +118,8 @@ class PdfRepository {
   Future<void> updatePageCount(String uid, String pdfId, int count) async {
     await _userPdfs(uid).doc(pdfId).update({'pageCount': count});
   }
+
+  // ─── Local search (client-side filter on Firestore snapshot) ─────────────
 
   Future<List<PdfEntity>> searchPdfs(String uid, String query) async {
     final snap = await _userPdfs(uid).get();
@@ -90,19 +130,5 @@ class PdfRepository {
             p.name.toLowerCase().contains(q) ||
             p.category.toLowerCase().contains(q))
         .toList();
-  }
-
-  UploadTask uploadPdfTask({
-    required String uid,
-    required File file,
-    required String pdfId,
-  }) {
-    final storageRef = _storage
-        .ref()
-        .child('${AppConstants.pdfStoragePath}/$uid/$pdfId.pdf');
-    return storageRef.putFile(
-      file,
-      SettableMetadata(contentType: 'application/pdf'),
-    );
   }
 }

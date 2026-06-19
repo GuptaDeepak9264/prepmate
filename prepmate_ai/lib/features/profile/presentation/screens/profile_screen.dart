@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -277,38 +279,93 @@ class ProfileScreen extends ConsumerWidget {
 
 // ─── Profile Header ───────────────────────────────────────────────────────────
 
-class _ProfileHeader extends StatelessWidget {
+class _ProfileHeader extends ConsumerWidget {
   final UserEntity user;
 
   const _ProfileHeader({required this.user});
 
+  Future<void> _pickAndUploadAvatar(BuildContext context, WidgetRef ref) async {
+    final picked = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+    );
+    if (picked == null || picked.files.single.path == null) return;
+    final file = File(picked.files.single.path!);
+    await ref
+        .read(profileNotifierProvider.notifier)
+        .uploadAvatar(file, user.uid);
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profileState = ref.watch(profileNotifierProvider);
+    final isUploadingAvatar =
+        profileState.isUpdating && profileState.avatarUploadProgress > 0;
+
     return Column(
       children: [
-        Stack(
-          children: [
-            AppAvatar(
-              imageUrl: user.photoUrl,
-              name: user.name,
-              size: 88,
-            ),
-            Positioned(
-              bottom: 0,
-              right: 0,
-              child: Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
+        GestureDetector(
+          onTap: profileState.isUpdating
+              ? null
+              : () => _pickAndUploadAvatar(context, ref),
+          child: Stack(
+            children: [
+              // Avatar — show local progress ring during upload
+              isUploadingAvatar
+                  ? SizedBox(
+                      width: 88,
+                      height: 88,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          AppAvatar(
+                            imageUrl: user.photoUrl,
+                            name: user.name,
+                            size: 88,
+                          ),
+                          SizedBox(
+                            width: 88,
+                            height: 88,
+                            child: CircularProgressIndicator(
+                              value: profileState.avatarUploadProgress,
+                              strokeWidth: 3,
+                              backgroundColor:
+                                  AppColors.primary.withOpacity(0.15),
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : AppAvatar(
+                      imageUrl: user.photoUrl,
+                      name: user.name,
+                      size: 88,
+                    ),
+              // Camera badge
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: profileState.isUpdating
+                        ? AppColors.textTertiary
+                        : AppColors.primary,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                  child: Icon(
+                    profileState.isUpdating
+                        ? Icons.hourglass_top_rounded
+                        : Icons.camera_alt_rounded,
+                    color: Colors.white,
+                    size: 14,
+                  ),
                 ),
-                child: const Icon(Icons.camera_alt_rounded,
-                    color: Colors.white, size: 14),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         const SizedBox(height: 14),
         Text(user.name, style: AppTextStyles.headlineMedium),

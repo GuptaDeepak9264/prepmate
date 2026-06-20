@@ -326,9 +326,9 @@ class _AccuracyCard extends StatelessWidget {
     return AppCard(
       child: Row(
         children: [
-          LinearPercentIndicator(
-            width: 60,
-            lineHeight: 60,
+          CircularPercentIndicator(
+            radius: 36,
+            lineWidth: 6,
             percent: (accuracy / 100).clamp(0.0, 1.0),
             center: Text(
               '${accuracy.toStringAsFixed(0)}%',

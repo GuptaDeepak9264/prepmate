@@ -21,11 +21,10 @@ if (flutterVersionName == null) flutterVersionName = '1.0'
 
 android {
     namespace "com.example.prepmate_ai"
-    compileSdk 34
-    ndkVersion flutter.ndkVersion
+    compileSdk 35
+    ndkVersion "25.1.8937393"
 
     compileOptions {
-        // Java 17 — compatible with AGP 8.3, Gradle 8.6, and Java 21 JDK
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
@@ -41,7 +40,7 @@ android {
     defaultConfig {
         applicationId "com.example.prepmate_ai"
         minSdkVersion 21
-        targetSdkVersion 34
+        targetSdkVersion 35
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         multiDexEnabled true

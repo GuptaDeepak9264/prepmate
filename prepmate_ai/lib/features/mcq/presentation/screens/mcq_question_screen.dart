@@ -34,8 +34,13 @@ class McqQuestionScreen extends ConsumerWidget {
     final progress =
         (mcqState.currentIndex + 1) / mcqState.questions.length;
 
-    return WillPopScope(
-      onWillPop: () async => _confirmExit(context),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final shouldPop = await _confirmExit(context);
+        if (shouldPop && context.mounted) context.pop();
+      },
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
